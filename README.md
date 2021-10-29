@@ -3,3 +3,4 @@
 Possible datasets:
 
 https://data.galaxyzoo.org/
+https://www.kaggle.com/kashnitsky/topic-1-exploratory-data-analysis-with-pandas/data?select=adult_train.csv
