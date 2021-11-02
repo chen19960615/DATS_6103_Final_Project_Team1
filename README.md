@@ -19,4 +19,4 @@ How does education level correlate with the work classes?
 What work classes and incomes correlate with the various non-US nationalities? 
 
 
-The data is a mix of categorical and continuous variables, so data exploration shall consist of a combination of histograms, violin plots, and other plots. Modeling will be done mainly through linear regression on continuous variables (age and education) for each set of categorical variables (race, sex, workclass)???
+The data is a mix of categorical and continuous variables, so data exploration shall consist of a combination of histograms, violin plots, and other plots. Modeling of income (> or < $50,000 per year) will be done mainly through linear regression on continuous variables (age and education) for each set of categorical variables (race, sex, workclass)???
