@@ -28,10 +28,13 @@ This dataset was produced by Cortez et al. in Modeling wine preferences by data 
 
 SMART Questions:
 
-Using Principal Component Analysis, investigate whether the various continuous variables, representing chemical concentration, are independent, and which linear combinations of chemical concentrations are independent. 
 
-Similarly, test which variables among fixed acidity, residual sugar, and total sulfur dioxide are most correlated with alcohol percentage. 
+Q1- Are fixed acidity, volatile acidity, residual sugar, density, citric acid, sulphates, chlorides, sulphur dioxide, alcohol and pH independent of each other?If not which combinations of those variables are independent of each other?
 
-Test whether residual sugars, or another chemical concentration (citric acid, Chlorides, Total sulfur dioxide, Sulphates, alcohol) is the biggest predictor of subjective quality. 
+Q2- Which variables among fixed acidity, residual sugar, and total sulfur dioxide are most correlated with alcohol percentage?
+
+Q3- Is residual sugars, or another chemical concentration (citric acid, Chlorides, Total sulfur dioxide, Sulphates, alcohol) the biggest predictor of subjective quality?
+
+
 
 The paper tested three models for predicting wine quality based on physicochemical information (SVMs, multiple regression, Neural networks). We can test these models, as well as other models, such as random forests, and K-nearest neighbors. 
