@@ -1,0 +1,117 @@
+#%%
+
+import numpy as np
+import pandas as pd
+import os 
+import matplotlib as plt
+from pandas.io.formats import style
+import seaborn as sns
+# %%
+
+#%%
+
+winedata = pd.read_csv('winequality-white.csv')
+
+
+# %%
+
+winedata.head(10)
+#%%
+winedata.info()
+
+#%%
+winedata.count.isnull()
+
+#%%
+# %%
+# Drop all NaN values in the dataframe 
+
+def dropNans(dframe):
+    dframe = dframe.copy(deep=True)
+    return dframe.dropna(axis = 0, how='any')
+
+#%%
+dropNans(winedata)
+
+# %%
+
+# To change Type, Rating and Listed_in to Category type
+def categorize(dframe):
+    dframe = dframe.copy(deep=True)
+    for col_name in dframe.columns :
+        if col_name in ('quality'):
+           dframe[col_name] = dframe[col_name].astype('category') 
+        else:
+            pass
+        
+    return dframe
+
+#%%
+
+winedata_v1 = categorize(winedata)
+#%%
+winedata_v1.info()
+
+#%%
+winedata.quality.value_counts()
+#%%
+winedata.density.value_counts()
+
+#%%
+# Scatter Plots
+
+X = winedata_v1['volatile acidity']
+Y = winedata['alcohol']
+#type = winedata['']
+
+sns.set(rc={'figure.figsize':(11.7,8.27)})
+#plt.style.use('fivethirtyeight')
+#fig, axis = plt.subplots(figsize = (10,10))
+p = sns.scatterplot(X, Y, data = winedata_v1,
+                    hue = 'quality',
+                    palette='viridis')
+
+p.set_title('Scatter Plot - Volatile Acidity v Alcohol')
+p.set_xlabel("Volatile Acidity", fontsize = 20)
+p.set_ylabel("Alcohol", fontsize = 20)
+p.set_ylim(0, 15)
+#plt.xlim(0, None)
+
+
+# %%
+
+# Pair Plot:
+
+sns.set(rc={'figure.figsize':(11.7,8.27)})
+p = sns.pairplot(data = winedata_v1,
+                    hue = 'quality',
+                    palette='viridis')
+
+
+
+
+#%%
+
+# Which features predict the quality of the wine? 
+
+# Which are the most significant predictors for the quality? 
+
+# Can we ignore certain features when looking at the quality ?
+
+
+
+#Ideas:
+
+# Naive Bayes ??? 
+
+# Predictors X: 
+# Reponse Y: quality
+
+# Feature Selection and model fit
+
+
+
+
+
+
+# %%
