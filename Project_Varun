@@ -1,0 +1,452 @@
+#%%
+
+import numpy as np
+import pandas as pd
+import os 
+import matplotlib as plt
+from pandas.io.formats import style
+import seaborn as sns
+
+from statsmodels.stats.outliers_influence import variance_inflation_factor
+# %%
+
+#%%
+
+winedata_orig = pd.read_csv('winequality-white.csv')
+
+# %%
+
+winedata_orig.head()
+#%%
+winedata_orig.info()
+
+# %%
+# Checking for NaN values in the dataframe 
+
+winedata_orig.isna().sum()
+
+
+# %%
+
+# To change Type, 'Quality' to Category type
+def categorize(dframe, cat_list):
+    dframe = dframe.copy(deep=True)
+    for col_name in dframe.columns :
+        if col_name in cat_list:
+           dframe[col_name] = dframe[col_name].astype('category') 
+        else:
+            pass
+        
+    return dframe
+
+#%%
+
+winedata = categorize(winedata_orig, ['quality'])
+#%%
+winedata.info()
+
+#%%
+winedata.quality.value_counts()
+winedata.quality.value_counts().sum()
+
+#%%
+
+# Distribution / Histogram of Quality
+
+sns.set(rc={'figure.figsize':(11.7,8.27)})
+X = winedata['quality']
+
+p = sns.histplot(data = winedata, x = X, palette = 'viridis' )
+
+p.set_title('Histogram - Quality')
+
+
+#%%
+#Pie Chart
+
+sns.set(rc={'figure.figsize':(11.7,8.27)})
+
+p = winedata.groupby('quality').size().plot(kind='pie', autopct='%1.02f%%', textprops={'fontsize': 10})
+
+p.set_ylabel('Per Wine Quality', size=22)
+
+#%% [markdown]
+
+# As we can see the Wine Quality is not evenly distributed. Quality 9 is only 0.001 percent of the total wines. Quality 3, at 0.004 percent.
+# We will continue our modeling keeping the categories as is at first. 
+#%%
+
+# Correlation Plot (Including Quality as Numeric)
+
+corr = winedata_orig.corr()
+corr.style.background_gradient(cmap='viridis').set_precision(2)
+
+#%% [makrdown]
+
+# The above shows Alcohol content having the strongest correlation with the Quality of the wine, followed by density and volatile acidity.
+#%%
+# We can also check the Multicollinearity between the independent variables to understand if the independent variables are highly correlated or not.
+
+def calc_vif(X):
+
+    # Calculating VIF
+    vif = pd.DataFrame()
+    vif["variables"] = X.columns
+    vif["VIF"] = [variance_inflation_factor(X.values, i) for i in range(X.shape[1])]
+
+    return(vif)
+
+#%%
+
+winedata_X = winedata.iloc[:,:-1]
+calc_vif(winedata_X)
+
+
+#%%[markdown]
+
+# We see that Density and pH level has high collinearity. We first remove these variables and test the vif score again.
+#%%
+
+winedata_X = winedata.drop(columns = ['density','pH'])
+winedata_X2 = winedata_X.iloc[:,:-1]
+calc_vif(winedata_X2)
+
+#%%
+
+winedata_X2 = winedata_X.drop(columns= ['fixed acidity','total sulfur dioxide'])
+
+winedata_X3 = winedata_X2.iloc[:,:-1]
+calc_vif(winedata_X3)
+
+#%%
+
+winedata_X3 = winedata_X2.drop(columns=['sulphates','alcohol'])
+
+winedata_X4 = winedata_X3.iloc[:,:-1]
+calc_vif(winedata_X4)
+
+#%% [markdown]
+# The above VIF test shows us the correlation between the different independent variables. We remove them all and keep the one with VIF lower than 10.
+
+#%%
+
+winedata_X4.head()
+#%%
+
+winedata = winedata.drop(columns = ['density',
+                                       'pH',
+                                       'fixed acidity',
+                                       'total sulfur dioxide',
+                                       'sulphates',
+                                       'alcohol'])
+
+#%%
+
+winedata.head()
+
+#Catplot
+
+
+#%%
+
+# Pair Plot:
+
+sns.set(rc={'figure.figsize':(11.7,8.27)})
+p = sns.pairplot(data = winedata,
+                    hue = 'quality',
+                    palette='viridis')
+
+
+
+
+
+#%%
+
+# Cross Validation
+# Bias-Variance Trade Off - check
+# Feature Selection
+# Model Selection
+# The best model
+
+# Which are the most significant predictors for the quality? 
+
+# Can we drop any features ?
+
+
+
+#Ideas:
+
+
+
+# Predictors X: 
+# Reponse Y: quality
+
+
+#%%
+
+from sklearn.model_selection import train_test_split
+# Import accuracy_score
+from sklearn.metrics import accuracy_score
+from sklearn import metrics
+from sklearn.metrics import confusion_matrix 
+from sklearn.metrics import classification_report
+from sklearn.model_selection import cross_val_score
+
+from sklearn.linear_model import LogisticRegression
+from sklearn.svm import SVC, LinearSVC
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.tree import DecisionTreeClassifier
+
+
+from sklearn.feature_selection import RFE
+
+
+
+#%%
+
+# Preparing the X data (features, predictors, regressors) and y data (target, dependent variable)
+
+
+xwine = winedata[['volatile acidity',
+                  'citric acid', 'residual sugar'
+                  'chlorides','free sulfur dioxide']]
+ywine = winedata['quality']
+
+#%%
+# Split dataset into 75% train, 25% test
+X_train, X_test, y_train, y_test = train_test_split(xwine, ywine, test_size=0.25, random_state=8)
+
+#%%
+# SVC
+
+
+svc = SVC(kernel = 'poly' , degree = 5)
+svc_fit = svc.fit(X_train, y_train)
+
+#print(svc_fit.score(X_test, y_test))
+
+
+#%%
+y_train_pred = svc.predict(X_train)
+y_test_pred = svc.predict(X_test)
+
+#%%
+
+#probability_svc = svc_fit.predict_proba(X)[:, 1]
+
+#%%
+# Evaluate train-set accuracy
+print('train set evaluation: ')
+print('Accuracy Score \n', accuracy_score(y_train, y_train_pred))
+
+print('F1 Score: ', metrics.f1_score(y_train, y_train_pred, average = 'weighted'))
+print('Precision Score: \n', metrics.precision_score(y_train, y_train_pred, average='weighted'))
+print('Recall Score: \n', metrics.recall_score(y_train, y_train_pred, average = 'weighted'))
+
+
+cm_train = confusion_matrix(y_train, y_train_pred)
+print('Confusion Matrix \n', confusion_matrix(y_train, y_train_pred))
+print('Classification Report \n', classification_report(y_train, y_train_pred))
+
+#%%
+
+sns.set(font_scale=1.4) # for label size
+sns.heatmap(cm_train, annot=True, annot_kws={"size": 16}) # font size
+
+#%%
+# Evaluate test-set accuracy
+print('test set evaluation: ')
+print('Accuracy Score \n', accuracy_score(y_test, y_test_pred))
+print('Confusion Matrix \n', confusion_matrix(y_test, y_test_pred))
+
+print('Classification Report \n', classification_report(y_test, y_test_pred))
+
+#%%
+
+print(cross_val_score(svc_fit, X_test, y_test, cv=3))
+
+#%%
+winedata.head()
+
+target = 'quality'
+
+#%%
+
+X_wine = winedata.loc[:, winedata.columns != target]    
+y_wine = winedata.loc[:, winedata.columns == target]
+
+#%%
+
+
+
+#%%
+X_wine.shape
+
+#%%
+
+y_wine.shape
+
+#%%
+
+# Split dataset into 80% train, 20% test
+X_train, X_test, y_train, y_test = train_test_split(X_wine, y_wine, test_size=0.25, random_state=8)
+
+#%%
+
+svc_v1 = SVC(kernel='poly', degree = 11)
+clf_svc_v1 = svc_v1.fit(X_train, y_train.values.ravel())
+
+print(clf_svc_v1.score(X_test, y_test))
+
+
+#%%
+
+y_train_pred = svc_v1.predict(X_train)
+y_test_pred = svc_v1.predict(X_test)
+
+#%%
+
+# Evaluate train-set accuracy
+print('train set evaluation: ')
+print('Accuracy Score \n', accuracy_score(y_train, y_train_pred))
+
+print('F1 Score: ', metrics.f1_score(y_train, y_train_pred, average = 'weighted'))
+print('Precision Score: \n', metrics.precision_score(y_train, y_train_pred, average='weighted'))
+print('Recall Score: \n', metrics.recall_score(y_train, y_train_pred, average = 'weighted'))
+
+
+cm_train = confusion_matrix(y_train, y_train_pred)
+print('Confusion Matrix \n', confusion_matrix(y_train, y_train_pred))
+print('Classification Report \n', classification_report(y_train, y_train_pred))
+
+
+#%% [markdown]
+
+# Feature Selection: 
+# Recursive Feature Elimination (RFE) ? 
+# https://scikit-learn.org/stable/modules/generated/sklearn.feature_selection.RFE.html
+
+
+
+rfe = RFE(estimator=svc_v1, n_features_to_select=1, step=1)
+rfe.fit(X_wine, y_wine.values.ravel())
+ranking = rfe.ranking_
+
+
+
+#%% [markdown]
+
+#%% [markdown]
+
+for kernel in ("poly", "rbf"):
+    SupportV = SVC(kernel=kernel, gamma=2)
+    SupportV.fit(X_train, y_train)
+    y_train_pred = SupportV.predict(X_train)
+    y_test_pred = SupportV.predict(X_test)
+    
+    
+    print(accuracy_score(y_test, y_test_pred))
+    
+
+
+
+#%%
+
+# To improve the accuracy and precision scores, we reduce the number of categories for our given data:
+# Reducing the number of categories
+
+winedata['quality'].value_counts().sort_values()
+
+remap_quality = {3: 'Low', 4: 'Low', 5: 'Low', 6: 'Medium', 7: 'High', 8: 'High', 9: 'High'}
+
+#%%
+
+winedata['quality'] = winedata['quality'].map(remap_quality).astype('category')
+
+winedata['quality'].value_counts()
+
+
+#%%
+winedata.head()
+
+
+#%%
+
+xwine = winedata[['volatile acidity','density', 'alcohol', 'sulphates' ]]
+ywine = winedata['quality']
+
+#%%
+# Split dataset into 80% train, 20% test
+X_train, X_test, y_train, y_test = train_test_split(xwine, ywine, test_size=0.25, random_state=8)
+
+#%%
+# SVC
+
+svc = SVC(kernel = 'poly' , degree = 4)
+svc_fit = svc.fit(X_train, y_train)
+
+#print(svc_fit.score(X_test, y_test))
+
+
+#%%
+y_train_pred = svc.predict(X_train)
+y_test_pred = svc.predict(X_test)
+
+#%%
+
+#probability_svc = svc_fit.predict_proba(X)[:, 1]
+
+#%%
+# Evaluate train-set accuracy
+print('train set evaluation: ')
+print('Accuracy Score \n', accuracy_score(y_train, y_train_pred))
+
+print('F1 Score: \n', metrics.f1_score(y_train, y_train_pred, average = 'weighted'))
+print('Precision Score: \n', metrics.precision_score(y_train, y_train_pred, average='weighted'))
+print('Recall Score: \n', metrics.recall_score(y_train, y_train_pred, average = 'weighted'))
+
+
+cm_train = confusion_matrix(y_train, y_train_pred)
+print('Confusion Matrix \n', confusion_matrix(y_train, y_train_pred))
+print('Classification Report \n', classification_report(y_train, y_train_pred))
+
+#%%
+
+sns.set(font_scale=1.4) # for label size
+sns.heatmap(cm_train, annot=True, annot_kws={"size": 16}) # font size
+
+
+
+#%%
+# Evaluate test-set accuracy
+print('test set evaluation: ')
+print('Accuracy Score \n', accuracy_score(y_test, y_test_pred))
+print('Confusion Matrix \n', confusion_matrix(y_test, y_test_pred))
+print('Classification Report \n', classification_report(y_test, y_test_pred))
+
+#%%
+
+print(cross_val_score(svc_fit, X_test, y_test, cv=5))
+
+
+# %%
+
+#maxlevel=None # default is None
+#crit = 'gini' # 'gini' default, other option: 'entropy'
+#dtree_admit2 = DecisionTreeClassifier(max_depth=maxlevel, criterion=crit, random_state=1)
+# Fit dt to the training set
+dtree_wine.fit(X_train,y_train)
+# Predict test set labels
+y_train_pred = dtree_admit2.predict(X_train)
+y_test_pred = dtree_admit2.predict(X_test)
+print(f'max_level: {maxlevel} ; criterion: {crit} ')
+# Evaluate train-set accuracy
+print('train set evaluation: ')
+print(accuracy_score(y_train, y_train_pred))
+print(confusion_matrix(y_train, y_train_pred))
+print(classification_report(y_train, y_train_pred))
+# Evaluate test-set accuracy
+print('test set evaluation: ')
+print(accuracy_score(y_test, y_test_pred))
+print(confusion_matrix(y_test, y_test_pred))
+print(classification_report(y_test, y_test_pred))
