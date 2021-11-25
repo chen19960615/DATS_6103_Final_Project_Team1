@@ -74,6 +74,20 @@ p.set_ylabel('Per Wine Quality', size=22)
 
 # As we can see the Wine Quality is not evenly distributed. Quality 9 is only 0.001 percent of the total wines. Quality 3, at 0.004 percent.
 # We will continue our modeling keeping the categories as is at first. 
+
+#%%
+
+# To improve the accuracy and precision scores, we reduce the number of categories for our given data:
+# Reducing the number of categories
+
+winedata['quality'].value_counts().sort_values()
+
+remap_quality = {3: 'Low', 4: 'Low', 5: 'Low', 6: 'Medium', 7: 'High', 8: 'High', 9: 'High'}
+
+winedata['quality'] = winedata['quality'].map(remap_quality).astype('category')
+
+winedata['quality'].value_counts()
+
 #%%
 
 # Correlation Plot (Including Quality as Numeric)
@@ -133,7 +147,7 @@ calc_vif(winedata_X4)
 winedata_X4.head()
 #%%
 
-winedata = winedata.drop(columns = ['density',
+winedata_v1 = winedata.drop(columns = ['density',
                                        'pH',
                                        'fixed acidity',
                                        'total sulfur dioxide',
@@ -142,7 +156,7 @@ winedata = winedata.drop(columns = ['density',
 
 #%%
 
-winedata.head()
+winedata_v1.head()
 
 #Catplot
 
@@ -157,9 +171,6 @@ p = sns.pairplot(data = winedata,
                     palette='viridis')
 
 
-
-
-
 #%%
 
 # Cross Validation
@@ -172,14 +183,6 @@ p = sns.pairplot(data = winedata,
 
 # Can we drop any features ?
 
-
-
-#Ideas:
-
-
-
-# Predictors X: 
-# Reponse Y: quality
 
 
 #%%
@@ -207,10 +210,16 @@ from sklearn.feature_selection import RFE
 # Preparing the X data (features, predictors, regressors) and y data (target, dependent variable)
 
 
-xwine = winedata[['volatile acidity',
+# Feature selection after vif
+xwine = winedata_v1[['volatile acidity',
                   'citric acid', 'residual sugar'
                   'chlorides','free sulfur dioxide']]
-ywine = winedata['quality']
+ywine = winedata_v1['quality']
+
+
+# Feature selection without vif check
+#xwine = winedata[['volatile acidity','citric acid', 'residual sugar','chlorides','free sulfur dioxide']]
+#ywine = winedata['quality']
 
 #%%
 # Split dataset into 75% train, 25% test
@@ -275,9 +284,6 @@ target = 'quality'
 X_wine = winedata.loc[:, winedata.columns != target]    
 y_wine = winedata.loc[:, winedata.columns == target]
 
-#%%
-
-
 
 #%%
 X_wine.shape
@@ -322,48 +328,8 @@ print('Classification Report \n', classification_report(y_train, y_train_pred))
 
 #%% [markdown]
 
-# Feature Selection: 
-# Recursive Feature Elimination (RFE) ? 
-# https://scikit-learn.org/stable/modules/generated/sklearn.feature_selection.RFE.html
-
-
-
-rfe = RFE(estimator=svc_v1, n_features_to_select=1, step=1)
-rfe.fit(X_wine, y_wine.values.ravel())
-ranking = rfe.ranking_
-
-
-
-#%% [markdown]
-
-#%% [markdown]
-
-for kernel in ("poly", "rbf"):
-    SupportV = SVC(kernel=kernel, gamma=2)
-    SupportV.fit(X_train, y_train)
-    y_train_pred = SupportV.predict(X_train)
-    y_test_pred = SupportV.predict(X_test)
-    
-    
-    print(accuracy_score(y_test, y_test_pred))
-    
-
-
-
 #%%
 
-# To improve the accuracy and precision scores, we reduce the number of categories for our given data:
-# Reducing the number of categories
-
-winedata['quality'].value_counts().sort_values()
-
-remap_quality = {3: 'Low', 4: 'Low', 5: 'Low', 6: 'Medium', 7: 'High', 8: 'High', 9: 'High'}
-
-#%%
-
-winedata['quality'] = winedata['quality'].map(remap_quality).astype('category')
-
-winedata['quality'].value_counts()
 
 
 #%%
@@ -428,25 +394,3 @@ print('Classification Report \n', classification_report(y_test, y_test_pred))
 
 print(cross_val_score(svc_fit, X_test, y_test, cv=5))
 
-
-# %%
-
-#maxlevel=None # default is None
-#crit = 'gini' # 'gini' default, other option: 'entropy'
-#dtree_admit2 = DecisionTreeClassifier(max_depth=maxlevel, criterion=crit, random_state=1)
-# Fit dt to the training set
-dtree_wine.fit(X_train,y_train)
-# Predict test set labels
-y_train_pred = dtree_admit2.predict(X_train)
-y_test_pred = dtree_admit2.predict(X_test)
-print(f'max_level: {maxlevel} ; criterion: {crit} ')
-# Evaluate train-set accuracy
-print('train set evaluation: ')
-print(accuracy_score(y_train, y_train_pred))
-print(confusion_matrix(y_train, y_train_pred))
-print(classification_report(y_train, y_train_pred))
-# Evaluate test-set accuracy
-print('test set evaluation: ')
-print(accuracy_score(y_test, y_test_pred))
-print(confusion_matrix(y_test, y_test_pred))
-print(classification_report(y_test, y_test_pred))
