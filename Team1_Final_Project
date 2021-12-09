@@ -1,0 +1,663 @@
+#%% [markdown]
+
+### Topic: Analyzing White Wine Data
+### Team 1 - Final Project
+### Authors: Suhas Buravalla, Steven Chen, Siva Gogineni, Varun Shah
+### Date: December 08, 2021
+
+
+# We analyze White Wine Quality Dataset, sourced from https://www.sciencedirect.com/science/article/pii/S0167923609001377.
+# It contains physicochemical and sensory preference data of several thousand Portuguese vinho verde white wine samples. The data was collected by CVRVV, the official certification organization of vinho verde.
+# The SMART questions we pose are as follows:
+
+# 1. Are the density, fixed acidity, residual sugar and other features collinear to each other?
+# 2. Which variables among fixed acidity, residual sugar, and total sulfur dioxide are most correlated with alcohol percentage?
+# 3. Which features impact the quality of the wine the most?
+# 4. Are any features less significant than the other?
+# 5. After checking the Confusion Matrix, F1-scores and Accuracy scores of each model, which model gives us the best results? 
+
+
+# Our analyses tests four different models for predicting wine quality based on physicochemical information (Multinomial Logistic Regression, K-Nearest Neighbours, Support Vector Machines and Random Forests).
+
+#%%
+
+from bokeh.core.property.visual import FontSize
+import numpy as np
+import pandas as pd
+import os 
+import matplotlib as plt
+from pandas.io.formats import style
+import seaborn as sns
+
+from statsmodels.stats.outliers_influence import variance_inflation_factor
+
+from sklearn.model_selection import train_test_split
+# Import accuracy_score
+from sklearn.metrics import accuracy_score
+from sklearn import metrics
+from sklearn.metrics import confusion_matrix 
+from sklearn.metrics import classification_report
+from sklearn.model_selection import cross_val_score
+
+from sklearn.svm import SVC 
+
+# %%
+
+
+#os.getcwd()
+
+#%%
+
+#os.chdir('/Users/varunshah/Documents/GitHub/DATS_6103_Final_Project_Team1')
+#%%
+
+winedata_orig = pd.read_csv('winequality-white.csv')
+
+# %%
+# We first explore our dataset 
+winedata_orig.head()
+#%%
+winedata_orig.info()
+
+#%%
+winedata_orig.describe()
+
+# %%
+# Checking for NaN values in the dataframe 
+
+winedata_orig.isna().sum()
+
+
+# %%
+
+# To change Type, 'Quality' to Category type
+def categorize(dframe, cat_list):
+    dframe = dframe.copy(deep=True)
+    for col_name in dframe.columns :
+        if col_name in cat_list:
+           dframe[col_name] = dframe[col_name].astype('category') 
+        else:
+            pass
+        
+    return dframe
+
+#%%
+
+winedata = categorize(winedata_orig, ['quality'])
+#%%
+winedata.info()
+
+
+#%% [markdown]
+
+# Lets understand the class, Quality of wine better and see its distribution
+
+
+#%%
+winedata.quality.value_counts()
+
+
+#%%
+
+# We first look at the Distribution / Histogram of Quality class
+
+sns.set(rc={'figure.figsize':(11.7,8.27)})
+X = winedata['quality']
+
+p = sns.histplot(data = winedata, x = X, palette = 'inferno' )
+
+p.set_title('Distribution of Wine Quality', FontSize = 20)
+p.set_xlabel('Wine Quality',FontSize = 15)
+
+
+#%%
+#Pie Chart
+
+sns.set(rc={'figure.figsize':(11.7,8.27)})
+
+p = winedata.groupby('quality').size().plot(kind='pie', autopct='%1.02f%%', textprops={'fontsize': 10})
+
+p.set_ylabel('Per Wine Quality', size=22)
+
+
+#%% [markdown]
+
+# As we can see the Wine Quality includes 7 classes, and they are not evenly distributed. 
+# Quality 9 is only 0.001 percent of the total wines. Quality 3, at 0.004 percent.
+
+#%% [markdown]
+
+# To improve the accuracy and precision scores, we reduce the number of categories for our given data:
+# Reducing the number of categories
+
+#%%
+
+
+winedata['quality'].value_counts().sort_values()
+
+remap_quality = {3: 'Bad', 4: 'Bad', 5: 'Bad', 6: 'Average', 7: 'Good', 8: 'Good', 9: 'Good'}
+
+winedata['quality'] = winedata['quality'].map(remap_quality).astype('category')
+winedata['quality'].cat.reorder_categories(['Bad','Average','Good'], inplace=True)
+
+winedata['quality'].value_counts()
+
+
+#%%
+# We see the distribution again in this reduced categories.
+
+sns.set(rc={'figure.figsize':(11.7,8.27)})
+X = winedata['quality']
+
+p = sns.histplot(data = winedata, x = X, palette = 'viridis' )
+
+p.set_title('Revised Distribution - Quality', FontSize=20)
+p.set_xlabel('Wine Quality',FontSize=15)
+
+
+#%%
+
+# We also check the correlation between all the features before we build our model.
+
+# Correlation Plot (Including Quality as Numeric)
+
+corr = winedata_orig.corr()
+corr.style.background_gradient(cmap='viridis').set_precision(2)
+
+#%% [markdown]
+
+# The above shows Alcohol content having the strongest correlation with the Quality of the wine, followed by density and volatile acidity.
+
+
+#%% [markdown]
+
+# We also look at the violinplots for each feature against quality.
+
+######### Steven's Violin Plot ########
+
+#%%
+
+
+
+
+
+
+
+
+
+
+#%% [markdown]
+
+#### VIF Check
+# We also check the Multicollinearity between the independent variables to see if any of the features could be dropped if they are highly collinear.
+
+#%%
+def calc_vif(X):
+
+    # Calculating VIF
+    vif = pd.DataFrame()
+    vif["variables"] = X.columns
+    vif["VIF"] = [variance_inflation_factor(X.values, i) for i in range(X.shape[1])]
+
+    return(vif)
+
+#%%
+
+winedata_X = winedata.iloc[:,:-1]
+calc_vif(winedata_X)
+
+
+#%%[markdown]
+
+# We see that Density and pH level has high collinearity. We first remove these variables and test the vif score again.
+
+# We will step by step remove the features that show high multicollinearity and keep the ones that are less than 10 which is ideal.
+#%%
+
+winedata_X = winedata.drop(columns = ['density','pH'])
+winedata_X2 = winedata_X.iloc[:,:-1]
+calc_vif(winedata_X2)
+
+#%%
+
+winedata_X2 = winedata_X.drop(columns= ['fixed acidity','total sulfur dioxide'])
+
+winedata_X3 = winedata_X2.iloc[:,:-1]
+calc_vif(winedata_X3)
+
+#%%
+
+winedata_X3 = winedata_X2.drop(columns=['sulphates','alcohol'])
+
+winedata_X4 = winedata_X3.iloc[:,:-1]
+calc_vif(winedata_X4)
+
+#%% [markdown]
+# The above VIF test shows us the correlation between the different independent variables. We remove them all and keep the one with VIF lower than 10.
+
+#%%
+
+winedata_X4.head()
+
+#%%
+# Dropping the features based on our above VIF check
+
+winedata_vif = winedata.drop(columns = ['density',
+                                       'pH',
+                                       'fixed acidity',
+                                       'total sulfur dioxide',
+                                       'sulphates',
+                                       'alcohol'])
+
+
+#%%
+
+# Pair Plot:
+
+sns.set(rc={'figure.figsize':(11.7,8.27)})
+p = sns.pairplot(data = winedata_vif,
+                    hue = 'quality',
+                    palette='viridis')
+
+
+#%% [markdown]
+
+# We will revisit these features as we begin building our models.
+
+
+
+#%% [markdown]
+
+# We now look for the best model. We will be using the below models to decide which model gives us the best results:
+
+# 1. Multinomial Logistic Regression
+# 2. K-Nearest Neighbour 
+# 3. Support Vector Machine
+# 4. Random Forest 
+
+# We will split our data into Training and Test set with 4:1 ratio (75%/25%) and keeping the random state consistent across all models.
+
+
+#%%
+
+
+
+#%% [markdown]
+
+
+### Multinomial Logistic Regression
+
+#%%
+
+
+########## SUHAS ################
+
+
+
+
+#%% [markdown]
+
+
+### K-Nearest Neighbour
+
+
+
+#%%
+
+
+########## SIVA ##########
+
+
+
+
+
+
+
+
+#%% [markdown]
+
+### Support Vector Machines
+
+
+
+#%%
+
+# We first try fitting the model with all predictors included in X except our dependent variable Quality.
+
+winedata.head()
+
+target = 'quality'
+
+#%%
+
+
+X_wine = winedata.loc[:, winedata.columns != target]    
+y_wine = winedata.loc[:, winedata.columns == target]
+
+
+#%%
+X_wine.shape
+
+#%%
+
+y_wine.shape
+
+#%%
+
+# Split dataset into 75% train, 25% test
+X_train, X_test, y_train, y_test = train_test_split(X_wine, y_wine, test_size=0.25, random_state=8)
+
+#%%
+
+# Using GridSearch to find the best parameters for SVM
+
+from sklearn.model_selection import GridSearchCV
+#%%
+
+param_grid = {'C':[0.1, 1, 10, 100, 1000], 'gamma': [1, 0.1, 0.01, 0.001, 0.0001]}
+grid = GridSearchCV(SVC(), param_grid, verbose=3)
+grid.fit(X_train, y_train.values.ravel())
+
+#%%
+grid.best_params_
+
+#%%
+grid.best_estimator_
+#%%
+grid.best_score_
+
+#%%
+
+
+svc_model = SVC(C = 1000, gamma = 0.01)
+#svc_model = SVC()
+clf_svc_model = svc_model.fit(X_train, y_train.values.ravel())
+
+print(clf_svc_model.score(X_test, y_test))
+
+
+#%%
+
+train_predictions = svc_model.predict(X_train)
+test_predictions = svc_model.predict(X_test)
+
+#%%
+
+# Evaluate train-set accuracy
+print('train set evaluation: ')
+print('Accuracy Score \n', accuracy_score(y_train, train_predictions))
+
+print('F1 Score: ', metrics.f1_score(y_train, train_predictions, average = 'weighted'))
+print('Precision Score: \n', metrics.precision_score(y_train, train_predictions, average='weighted'))
+print('Recall Score: \n', metrics.recall_score(y_train, train_predictions, average = 'weighted'))
+
+
+print('Confusion Matrix for Train-set \n', confusion_matrix(y_train, train_predictions))
+print('Classification Report for Train-set\n', classification_report(y_train, train_predictions))
+
+
+
+#%% [markdown]
+# The above shows the Training Set has an Accuracy Score of 95%, and weighted average of F1-scores 95%.
+# We now run the test set below:
+
+#%% 
+
+# Evaluate Test-Set
+
+print('test set evaluation: ')
+print('Accuracy Score \n', accuracy_score(y_test, test_predictions))
+
+print('F1 Score: ', metrics.f1_score(y_test, test_predictions, average = 'weighted'))
+print('Precision Score: \n', metrics.precision_score(y_test, test_predictions, average='weighted'))
+print('Recall Score: \n', metrics.recall_score(y_test, test_predictions, average = 'weighted'))
+
+print('Confusion Matrix \n', confusion_matrix(y_test, test_predictions))
+print('Classification Report \n', classification_report(y_test, test_predictions))
+
+#%%
+
+cm_train = confusion_matrix(y_test, test_predictions)
+sns.set(font_scale=1.4) # for label size
+sns.heatmap(cm_train, annot=True, annot_kws={"size": 16}) # font size
+
+#%%
+
+print(cross_val_score(clf_svc_model, X_test, y_test.values.ravel(), cv=3))
+
+#%%
+# The test set shows the Accuracy score of 61%, meaning the predictions were accurate 60% of the time.
+# As these classes are more evenly distributed, we also see the average of the F1-scores at 61% for the 3 classes.
+
+#%% 
+# We now try to select our features based on the correlation with Quality. 
+# Starting with Alcohol which has the strongest correlation, and see if we can get a better model.
+
+X = winedata[['alcohol',
+                  'density', 'chlorides',
+                  'volatile acidity','total sulfur dioxide']]
+y = winedata['quality'].values
+
+
+#%%
+# We now repeat the same process again with these features;
+# Split dataset into 75% train, 25% test
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=8)
+
+#%%
+
+# Using GridSearch to find the best parameters for SVM
+
+param_grid = {'C':[0.1, 1, 10, 100, 1000], 'gamma': [1, 0.1, 0.01, 0.001, 0.0001]}
+grid = GridSearchCV(SVC(), param_grid, verbose=3)
+grid.fit(X_train, y_train)
+
+#%%
+grid.best_params_
+#%%
+grid.best_estimator_
+
+#%%
+grid.best_score_
+
+#%%
+
+svc_model_v1 = SVC(C = 1000, gamma = 1)
+#svc_model = SVC(C = 10, gamma = 1)
+clf_svc_model_v1 = svc_model_v1.fit(X_train, y_train)
+
+print(clf_svc_model_v1.score(X_test, y_test))
+
+
+#%%
+
+train_predictions = svc_model_v1.predict(X_train)
+test_predictions = svc_model_v1.predict(X_test)
+
+#%%
+
+# Evaluate train-set accuracy
+print('train set evaluation: ')
+print('Accuracy Score \n', accuracy_score(y_train, train_predictions))
+
+print('F1 Score: ', metrics.f1_score(y_train, train_predictions, average = 'weighted'))
+print('Precision Score: \n', metrics.precision_score(y_train, train_predictions, average='weighted'))
+print('Recall Score: \n', metrics.recall_score(y_train, train_predictions, average = 'weighted'))
+
+print('Confusion Matrix \n', confusion_matrix(y_train, train_predictions))
+print('Classification Report \n', classification_report(y_train, train_predictions))
+
+
+
+#%% [markdown]
+# The above shows the Training Set has an Accuracy Score of 92%, and weighted average of F1-scores 92%.
+# We now run the test set below:
+
+#%% 
+
+# Evaluate Test-Set
+
+print('test set evaluation: ')
+print('Accuracy Score \n', accuracy_score(y_test, test_predictions))
+
+print('F1 Score: ', metrics.f1_score(y_test, test_predictions, average = 'weighted'))
+print('Precision Score: \n', metrics.precision_score(y_test, test_predictions, average='weighted'))
+print('Recall Score: \n', metrics.recall_score(y_test, test_predictions, average = 'weighted'))
+
+
+print('Confusion Matrix \n', confusion_matrix(y_test, test_predictions))
+print('Classification Report \n', classification_report(y_test, test_predictions))
+
+
+#%%
+cm_train = confusion_matrix(y_test, test_predictions)
+sns.set(font_scale=1.4) # for label size
+sns.heatmap(cm_train, annot=True, annot_kws={"size": 16}) # font size
+
+#%%
+
+print(cross_val_score(clf_svc_model_v1, X_test, y_test, cv=5))
+
+#%% [markdown]
+# The test set shows the Accuracy score of 60%, meaning the predictions were accurate 60% of the time.
+# As these classes are more evenly distributed, we also see the average of the F1-scores at 60% for the 3 classes.
+# We notice that keeping only 5 features vs 11 features, has only made a difference of 0.07% in the scores.
+
+
+
+
+#%% [markdown]
+
+# We now select features based on the VIF check, the features with multicolinearity less than 10 is accepted.
+# This includes Volatile Acidity, Citric Acid, Residual Sugar, Chlorides and Free Sulphur Dioxide.
+
+#%%
+
+X = winedata[['volatile acidity',
+                  'citric acid', 'residual sugar',
+                  'chlorides','free sulfur dioxide']]
+y = winedata['quality']
+
+
+#%%
+X.columns
+X.shape
+
+y.name
+y.shape
+
+#%%
+# Split dataset into 75% train, 25% test
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=8)
+
+#%%
+
+param_grid = {'C':[0.1, 1, 10, 100, 1000], 'gamma': [1, 0.1, 0.01, 0.001, 0.0001]}
+grid = GridSearchCV(SVC(), param_grid, verbose=3)
+grid.fit(X_train, y_train.values.ravel())
+
+#%%
+grid.best_params_
+#%%
+grid.best_estimator_
+
+#%%
+grid.best_score_
+
+#%%
+
+svc_model_vif = SVC(C = 1000, gamma = 1)
+#svc_model_vif = SVC()
+clf_svc_model_vif = svc_model_vif.fit(X_train, y_train.values.ravel())
+
+print(clf_svc_model_vif.score(X_test, y_test))
+
+
+#%%
+
+train_predictions = svc_model_vif.predict(X_train)
+test_predictions = svc_model_vif.predict(X_test)
+
+#%%
+
+# Evaluate train-set accuracy
+print('train set evaluation: ')
+print('Accuracy Score \n', accuracy_score(y_train, train_predictions))
+
+print('F1 Score: ', metrics.f1_score(y_train, train_predictions, average = 'weighted'))
+print('Precision Score: \n', metrics.precision_score(y_train, train_predictions, average='weighted'))
+print('Recall Score: \n', metrics.recall_score(y_train, train_predictions, average = 'weighted'))
+
+print('Confusion Matrix \n', confusion_matrix(y_train, train_predictions))
+print('Classification Report \n', classification_report(y_train, train_predictions))
+
+
+
+#%% [markdown]
+# The above shows the Training Set has an Accuracy Score of 95%, and weighted average of F1-scores 96%.
+# We now run the test set below:
+
+#%% 
+
+# Evaluate Test-Set
+
+print('test set evaluation: ')
+print('Accuracy Score \n', accuracy_score(y_test, test_predictions))
+
+print('F1 Score: ', metrics.f1_score(y_test, test_predictions, average = 'weighted'))
+print('Precision Score: \n', metrics.precision_score(y_test, test_predictions, average='weighted'))
+print('Recall Score: \n', metrics.recall_score(y_test, test_predictions, average = 'weighted'))
+
+print('Confusion Matrix \n', confusion_matrix(y_test, test_predictions))
+print('Classification Report \n', classification_report(y_test, test_predictions))
+
+
+
+#%% [markdown]
+
+# The above feature selection based on VIF check, brings the accuracy score and the average F1-score to 58%.
+
+# Looking at all the models tested, we think the model with features from highest correlation is our best model.
+# This includes predictors: 'alcohol','density', 'chlorides','volatile acidity','total sulfur dioxide'
+
+#%% [markdown]
+
+### Random Forest
+
+
+#%%
+
+######### STEVEN #########
+
+
+
+#%% [markdown]
+
+### Looking at all the models, we think KNN and Random Forest gave us the best results with the below Accuracy Scores and F1- Scores:
+
+
+#%% [markdown]
+
+### Conclusion:
+
+# Our analysis, answer majority of the questions we posed at the beginning.
+
+# 1. Are the density, fixed acidity, residual sugar and other features collinear to each other?
+# The VIF Check showed us volatile acidity, citric acid, residual sugar, chlorides and free sulphur dioxide having the least collinearity between each other. 
+# This shows us that changing either of these features does not impact the characteristics of other features.
+
+
+# 2. What is the correlation between all the features with alcohol?
+# The correlation matrix showed us Density, Residual Sugar, Total Sulphur Dioxide are highly correlated with alcohol and has negative effect on the alcohol content.
+# For a wine to reduce its alcohol level, they could make changes to any of these features to see the difference.
+
+# 3. Which features impact the quality of the wine the most?
+# We again look at the correlation matrix and the scores from our models, and can state that Alcohol, Density, Chlorides, Volatile Acidity & Total Sulphur Dioxide impacts Quality the most statistically.
+
+# 4. Are any features less significant than the other?
+# After testing different models, we found pH level and sulphates as the least significant.
+
+# 5. Out of all the different models, which model gives us the best results?
+# Comparing all the models, Random Forest and K-NN gives us the best results.
+
+
