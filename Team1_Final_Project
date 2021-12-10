@@ -307,7 +307,7 @@ p = sns.pairplot(data = winedata_vif,
 
 ########## SIVA ##########
 
-
+##
 
 
 
