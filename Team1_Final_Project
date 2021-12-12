@@ -886,7 +886,7 @@ estimator = rf.estimators_[1]
 from sklearn.tree import export_graphviz
 # Export as dot file
 export_graphviz(estimator, out_file='tree.dot', 
-                feature_names = x_train.columns,
+                feature_names = X_train.columns,
                 class_names = y_train.unique(),
                 rounded = True, proportion = False, 
                 precision = 2, filled = True)
