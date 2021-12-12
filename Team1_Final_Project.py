@@ -979,43 +979,6 @@ print('Classification Report \n', classification_report(y_test, test_predictions
 ######### STEVEN #########
 
 
-print('Random Forest model accuracy (with the test set):', rf.score(X_test, y_test))
-print('Random Forest model accuracy (with the train set):', rf.score(X_train, y_train))
-print('Classification Report on test set\n', classification_report(y_test, rf.predict(X_test)))
-print('Classification Report on training set\n', classification_report(y_train, rf.predict(X_train)))
-print('Confusion Matrix on test set\n', confusion_matrix(y_test, rf.predict(X_test)))
-
-
-# Feature Importance
-importances = rf.feature_importances_
-std = np.std([tree.feature_importances_ for tree in rf.estimators_], axis=0)
-
-importances = pd.Series(importances, index=X_train.columns)
-
-plt.figure(figsize=(8, 6))
-importances.plot.bar(yerr=std)
-plt.title("Feature importances using MDI")
-plt.xticks(rotation = 30)
-plt.ylabel("Mean decrease in impurity")
-plt.gcf().subplots_adjust(bottom=0.15)
-plt.savefig('rf_features.png')
-plt.show()
-plt.close()
-
-#%%
-# decision tree vizualisation
-estimator = rf.estimators_[1]
-from sklearn.tree import export_graphviz
-# Export as dot file
-export_graphviz(estimator, out_file='tree.dot', 
-                feature_names = X_train.columns,
-                class_names = y_train.unique(),
-                rounded = True, proportion = False, 
-                precision = 2, filled = True)
-
-# Convert to png using system command (requires Graphviz)
-from graphviz import render
-render('dot', 'png', 'tree.dot') 
 
 #%% [markdown]
 
