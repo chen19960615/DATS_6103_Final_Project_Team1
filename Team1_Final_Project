@@ -1,4 +1,4 @@
-#%% [markdown]
+
 
 ### Topic: Analyzing White Wine Data
 ### Team 1 - Final Project
@@ -173,10 +173,11 @@ corr.style.background_gradient(cmap='viridis').set_precision(2)
 #%%
 
 import holoviews as hv
+import hvplot.pandas
 
 variables = [c for c in winedata.columns if 'quality' not in c]
 
-violinlist = [ winedata.hvplot.violin(y=v, by='quality_class').redim.values(quality_class=['bad', 'average', 'good']) for v in variables]
+violinlist = [ winedata.hvplot.violin(y=v, by='quality').redim.values(quality_class=['bad', 'average', 'good']) for v in variables]
 
 violin_layout = hv.Layout(violinlist).cols(2)
 
@@ -300,56 +301,7 @@ from sklearn.linear_model import LogisticRegression
 #from sklearn.model_selection import cross_val_score
 
 import statsmodels.api as sm
-#import matplotlib.pyplot as plt
-#%%
-#wine = pd.read_csv("winequality-white.csv")
-#%%
-#wine['quality'] = wine['quality'].astype(object)
-# %%
 
-# To change Type, 'Quality' to Category type
-#def categorize(dframe, cat_list):
-#    dframe = dframe.copy(deep=True)
-#    for col_name in dframe.columns :
-#        if col_name in cat_list:
-#           dframe[col_name] = dframe[col_name].astype('category') 
-#        else:
-#            pass
-        
-#    return dframe
-
-#%%
-
-#winedata = categorize(wine, ['quality'])
-#%%
-#winedata.info()
-
-#%%
-#winedata.quality.value_counts()
-#winedata.quality.value_counts().sum()
-
-
-
-#%% [markdown]
-
-# To improve the accuracy and precision scores, we reduce the number of categories for our given data:
-# Reducing the number of categories
-
-winedata['quality'].value_counts().sort_values()
-
-remap_quality = {3: 'bad', 4: 'bad', 5: 'bad', 6: 'average', 7: 'good', 8: 'good', 9: 'good'}
-
-winedata['quality'] = winedata['quality'].map(remap_quality).astype('category')
-
-winedata['quality'].value_counts()
-# %%
-# initial logit model with all variables 
-#x = winedata.drop('quality', axis=1)
-#y = winedata['quality']
-#x = winedata[['volatile acidity',
-                  #'citric acid', 'residual sugar',
-                  #'chlorides','free sulfur dioxide']]
-#y = winedata['quality']
 
 x= winedata[['volatile acidity', 'chlorides', 'density', 'alcohol', 'total sulfur dioxide']]
 y= winedata['quality']
@@ -956,21 +908,16 @@ print('Classification Report \n', classification_report(y_test, test_predictions
 
 ### Random Forest
 
-
 #%%
 
-# We select the features based on the highest correlation with Quality, as we have selected for other models.
+# Using all features gives best performance at ~70%.
+X_train, X_test, y_train, y_test = train_test_split(winedata[['fixed acidity', 'volatile acidity', 'citric acid', 'residual sugar','chlorides', 'free sulfur dioxide', 'total sulfur dioxide', 'density','pH', 'sulphates', 'alcohol']], winedata['quality'], random_state=8)
 
-X = winedata[['alcohol',
-                  'density', 'chlorides',
-                  'volatile acidity','total sulfur dioxide']]
-y = winedata['quality'].values
+# Using top 5 important features given in feature importance plot below decreases performance about 1.5%
+# X_train, X_test, y_train, y_test = train_test_split(winedata[['alcohol', 'density', 'volatile acidity', 'free sulfur dioxide', 'total sulfur dioxide']], winedata['quality'], random_state=8)
 
-
-#%%
-# We now repeat the same process again with these features;
-# Split dataset into 75% train, 25% test
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=8)
+# Using top 5 features correlated with quality decreases performance about 1.5%
+# X_train, X_test, y_train, y_test = train_test_split(winedata[['alcohol', 'density', 'chlorides', 'volatile acidity','total sulfur dioxide']], winedata['quality'], random_state=8)
 
 
 #%%
@@ -984,7 +931,7 @@ opts = {'bootstrap': True, 'class_weight': None, 'criterion': 'gini',
         'n_estimators': 300, 'random_state': None}
 
 rf = RandomForestClassifier(**opts)  # instantiate
-rf.fit(X_test, y_train)
+rf.fit(X_train, y_train)
 
 print('Random Forest model accuracy (with the test set):', rf.score(X_test, y_test))
 print('Random Forest model accuracy (with the train set):', rf.score(X_train, y_train))
