@@ -959,6 +959,21 @@ print('Classification Report \n', classification_report(y_test, test_predictions
 
 #%%
 
+# We select the features based on the highest correlation with Quality, as we have selected for other models.
+
+X = winedata[['alcohol',
+                  'density', 'chlorides',
+                  'volatile acidity','total sulfur dioxide']]
+y = winedata['quality'].values
+
+
+#%%
+# We now repeat the same process again with these features;
+# Split dataset into 75% train, 25% test
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=8)
+
+
+#%%
 from sklearn.ensemble import RandomForestClassifier
 
 opts = {'bootstrap': True, 'class_weight': None, 'criterion': 'gini',
