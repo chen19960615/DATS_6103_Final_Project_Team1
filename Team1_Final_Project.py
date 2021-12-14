@@ -1,4 +1,4 @@
-#%% [markdown]
+
 
 ### Topic: Analyzing White Wine Data
 ### Team 1 - Final Project
@@ -146,12 +146,10 @@ winedata['quality'].value_counts()
 # We see the distribution again in this reduced categories.
 
 sns.set(rc={'figure.figsize':(11.7,8.27)})
-X = winedata['quality']
 
-p = sns.histplot(data = winedata, x = X, palette = 'viridis' )
+p = winedata.groupby('quality').size().plot(kind='pie', autopct='%1.02f%%', textprops={'fontsize': 10})
 
-p.set_title('Revised Distribution - Quality', FontSize=20)
-p.set_xlabel('Wine Quality',FontSize=15)
+p.set_ylabel('Per Wine Quality', size=22)
 
 
 #%%
@@ -172,14 +170,14 @@ corr.style.background_gradient(cmap='viridis').set_precision(2)
 
 # We also look at the violinplots for each feature against quality. The violin plots require the holoviews package. If not installed, see the plots on the report. 
 
-######### Steven's Violin Plot ########
-
 #%%
+
 import holoviews as hv
+import hvplot.pandas
 
 variables = [c for c in winedata.columns if 'quality' not in c]
 
-violinlist = [ winedata.hvplot.violin(y=v, by='quality_class').redim.values(quality_class=['bad', 'average', 'good']) for v in variables]
+violinlist = [ winedata.hvplot.violin(y=v, by='quality').redim.values(quality_class=['bad', 'average', 'good']) for v in variables]
 
 violin_layout = hv.Layout(violinlist).cols(2)
 
@@ -281,85 +279,29 @@ p = sns.pairplot(data = winedata_vif,
 # We will split our data into Training and Test set with 4:1 ratio (75%/25%) and keeping the random state consistent across all models.
 
 
-#%%
-
-
 
 #%% [markdown]
 
 
 ### Multinomial Logistic Regression
 
-#%%
-
-
-########## SUHAS ################
 
 #%%
-import pandas as pd 
-import numpy as np 
-import scipy as scp
+#import pandas as pd 
+#import numpy as np 
+#import scipy as scp
 import sklearn
 
-from sklearn.model_selection import train_test_split
+#from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import classification_report
-from sklearn import metrics 
-from sklearn.metrics import confusion_matrix
-from sklearn.metrics import accuracy_score
-from sklearn.model_selection import cross_val_score
+#from sklearn.metrics import classification_report
+#from sklearn import metrics 
+#from sklearn.metrics import confusion_matrix
+#from sklearn.metrics import accuracy_score
+#from sklearn.model_selection import cross_val_score
 
 import statsmodels.api as sm
-import matplotlib.pyplot as plt
-#%%
-wine = pd.read_csv("winequality-white.csv")
-#%%
-#wine['quality'] = wine['quality'].astype(object)
-# %%
 
-# To change Type, 'Quality' to Category type
-def categorize(dframe, cat_list):
-    dframe = dframe.copy(deep=True)
-    for col_name in dframe.columns :
-        if col_name in cat_list:
-           dframe[col_name] = dframe[col_name].astype('category') 
-        else:
-            pass
-        
-    return dframe
-
-#%%
-
-winedata = categorize(wine, ['quality'])
-#%%
-winedata.info()
-
-#%%
-winedata.quality.value_counts()
-winedata.quality.value_counts().sum()
-
-
-
-#%%
-
-# To improve the accuracy and precision scores, we reduce the number of categories for our given data:
-# Reducing the number of categories
-
-winedata['quality'].value_counts().sort_values()
-
-remap_quality = {3: 'bad', 4: 'bad', 5: 'bad', 6: 'average', 7: 'good', 8: 'good', 9: 'good'}
-
-winedata['quality'] = winedata['quality'].map(remap_quality).astype('category')
-
-winedata['quality'].value_counts()
-# %%
-# initial logit model with all variables 
-#x = winedata.drop('quality', axis=1)
-#y = winedata['quality']
-#x = winedata[['volatile acidity',
-                  #'citric acid', 'residual sugar',
-                  #'chlorides','free sulfur dioxide']]
-#y = winedata['quality']
 
 x= winedata[['volatile acidity', 'chlorides', 'density', 'alcohol', 'total sulfur dioxide']]
 y= winedata['quality']
@@ -387,9 +329,8 @@ print('Intercept: \n', model1.intercept_)
 print('Coefficients: \n', model1.coef_)
 
 #%%
-import numpy as np
-np.exp(model1.coef_)
 
+np.exp(model1.coef_)
 
 #%%
 #Use statsmodels to assess variables
@@ -431,6 +372,14 @@ print('Confusion Matrix \n', confusion_matrix(y_test, test_preds))
 print('Classification Report \n', classification_report(y_test, test_preds))
 
 
+#%% [markdown]
+
+# Our Logistic Regression model shows us the Train Scores at 56% along with Test Accuracy score at 56% as well, with the weighted average of Precision, Recall Scores at 56%. 
+# As a model, the training and test scores are very similar and gives us the best fit. However our overall scores are very low.
+
+
+# We now look at our next model.
+
 
 #%% [markdown]
 
@@ -438,21 +387,17 @@ print('Classification Report \n', classification_report(y_test, test_preds))
 ### K-Nearest Neighbour
 
 
+#%% 
 
-#%%
-
-
-########## SIVA ################################################################
-# K-Nearest Neighbors (K-NN)
 
 # Importing the libraries
-import numpy as np
+#import numpy as np
 import matplotlib.pyplot as plt
-import pandas as pd
+#import pandas as pd
 import seaborn as sb
-from statsmodels.stats.outliers_influence import variance_inflation_factor
+#from statsmodels.stats.outliers_influence import variance_inflation_factor
 from sklearn.decomposition import PCA
-from sklearn.metrics import classification_report
+#from sklearn.metrics import classification_report
 #%%
 #calculate_vif(dt) :
 #    vif=pd.DataFrame()
@@ -511,7 +456,7 @@ print(dataset_vif_filter)
 
 #%%
 # Splitting the dataset into the Training set and Test set
-from sklearn.model_selection import train_test_split
+#from sklearn.model_selection import train_test_split
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.25, random_state = 21)
 print(X_train)
 print(y_train)
@@ -545,15 +490,13 @@ y_pred = classifier.predict(X_test)
 print(np.concatenate((y_pred.reshape(len(y_pred),1), y_test.reshape(len(y_test),1)),1))
 #%%
 # Making the Confusion Matrix
-from sklearn.metrics import confusion_matrix, accuracy_score
+#from sklearn.metrics import confusion_matrix, accuracy_score
 cm = confusion_matrix(y_test, y_pred)
 print(cm)
 print('Accuracy score test Test \n',accuracy_score(y_test, y_pred))
 
 print('Confusion Matrix for Test Set \n', confusion_matrix(y_test, y_pred))
 print('Classification Report for Test Set \n', classification_report(y_test,  y_pred)) 
-
-
 
 
 
@@ -656,20 +599,11 @@ plt.show()
 #%%
 
 plt.scatter(X[:,0],X[:,1],c=y,label=y)
-#%%
-##############################################################################
-
-
-
-
-
-
 
 
 #%% [markdown]
 
 ### Support Vector Machines
-
 
 
 #%%
@@ -689,8 +623,6 @@ y_wine = winedata.loc[:, winedata.columns == target]
 
 #%%
 X_wine.shape
-
-#%%
 
 y_wine.shape
 
@@ -777,7 +709,7 @@ sns.heatmap(cm_train, annot=True, annot_kws={"size": 16}) # font size
 
 print(cross_val_score(clf_svc_model, X_test, y_test.values.ravel(), cv=3))
 
-#%%
+#%% [markdown]
 # The test set shows the Accuracy score of 61%, meaning the predictions were accurate 60% of the time.
 # As these classes are more evenly distributed, we also see the average of the F1-scores at 61% for the 3 classes.
 
@@ -976,10 +908,19 @@ print('Classification Report \n', classification_report(y_test, test_predictions
 
 ### Random Forest
 
-
 #%%
 
-######### STEVEN #########
+# Using all features gives best performance at ~70%.
+X_train, X_test, y_train, y_test = train_test_split(winedata[['fixed acidity', 'volatile acidity', 'citric acid', 'residual sugar','chlorides', 'free sulfur dioxide', 'total sulfur dioxide', 'density','pH', 'sulphates', 'alcohol']], winedata['quality'], random_state=8)
+
+# Using top 5 important features given in feature importance plot below decreases performance about 1.5%
+# X_train, X_test, y_train, y_test = train_test_split(winedata[['alcohol', 'density', 'volatile acidity', 'free sulfur dioxide', 'total sulfur dioxide']], winedata['quality'], random_state=8)
+
+# Using top 5 features correlated with quality decreases performance about 1.5%
+# X_train, X_test, y_train, y_test = train_test_split(winedata[['alcohol', 'density', 'chlorides', 'volatile acidity','total sulfur dioxide']], winedata['quality'], random_state=8)
+
+
+#%%
 from sklearn.ensemble import RandomForestClassifier
 
 opts = {'bootstrap': True, 'class_weight': None, 'criterion': 'gini',
@@ -990,6 +931,7 @@ opts = {'bootstrap': True, 'class_weight': None, 'criterion': 'gini',
         'n_estimators': 300, 'random_state': None}
 
 rf = RandomForestClassifier(**opts)  # instantiate
+rf.fit(X_train, y_train)
 
 print('Random Forest model accuracy (with the test set):', rf.score(X_test, y_test))
 print('Random Forest model accuracy (with the train set):', rf.score(X_train, y_train))
@@ -1026,9 +968,8 @@ export_graphviz(estimator, out_file='tree.dot',
                 precision = 2, filled = True)
 
 # Convert to png using system command (requires Graphviz)
-from graphviz import render
-render('dot', 'png', 'tree.dot') 
-
+# from graphviz import render
+# render('dot', 'png', 'tree.dot') 
 
 #%% [markdown]
 
