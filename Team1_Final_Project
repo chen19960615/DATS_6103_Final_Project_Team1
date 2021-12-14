@@ -970,7 +970,7 @@ opts = {'bootstrap': True, 'class_weight': None, 'criterion': 'gini',
         'n_estimators': 300, 'random_state': None}
 
 rf = RandomForestClassifier(**opts)  # instantiate
-
+rf.fit(X_test, y_train)
 
 print('Random Forest model accuracy (with the test set):', rf.score(X_test, y_test))
 print('Random Forest model accuracy (with the train set):', rf.score(X_train, y_train))
