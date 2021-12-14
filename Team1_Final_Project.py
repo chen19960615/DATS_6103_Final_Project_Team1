@@ -21,7 +21,6 @@
 
 #%%
 
-import holoviews as hv
 import numpy as np
 import pandas as pd
 import os 
@@ -176,16 +175,17 @@ corr.style.background_gradient(cmap='viridis').set_precision(2)
 ######### Steven's Violin Plot ########
 
 #%%
+import holoviews as hv
 
-# variables = [c for c in winedata.columns if 'quality' not in c]
+variables = [c for c in winedata.columns if 'quality' not in c]
 
-# violinlist = [ winedata.hvplot.violin(y=v, by='quality_class').redim.values(quality_class=['bad', 'average', 'good']) for v in variables]
+violinlist = [ winedata.hvplot.violin(y=v, by='quality_class').redim.values(quality_class=['bad', 'average', 'good']) for v in variables]
 
-# violin_layout = hv.Layout(violinlist).cols(2)
+violin_layout = hv.Layout(violinlist).cols(2)
 
-# hv.save(violin_layout, 'violins.png')
+hv.save(violin_layout, 'violins.png')
 
-# violin_layout
+violin_layout
 
 
 
